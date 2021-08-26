@@ -1,11 +1,11 @@
 ## Tally Arbiter Pimoroni Blinkt Listener
 
 # File name: tallyarbiter-pimoroni-blinkt-listener.py
-# Version: 1.1.0
+# Version: 1.2.0
 # Author: Joseph Adams
 # Email: josephdadams@gmail.com
 # Date created: 2/26/2021
-# Date last modified: 5/5/2021
+# Date last modified: 8/26/2021
 # Notes: This file is a part of the Tally Arbiter project. For more information, visit tallyarbiter.com
 
 from signal import signal, SIGINT
@@ -16,10 +16,9 @@ import blinkt
 import socketio
 import json
 
+devices = []
 device_states = []
 bus_options = []
-mode_preview = False
-mode_program = False
 
 server = sys.argv[1]
 
@@ -94,6 +93,11 @@ def reconnect():
 		doBlink(0, 0, 0)
 		time.sleep(.3)
 
+@sio.on('devices')
+def on_devices(data):
+	global devices
+	devices = data
+
 @sio.on('device_states')
 def on_device_states(data):
 	global device_states
@@ -117,7 +121,7 @@ def on_flash():
 	time.sleep(.5)
 	doBlink(255, 255, 255)
 	time.sleep(.5)
-	evaluateMode()
+	processTallyData()
 
 @sio.on('reassign')
 def on_reassign(oldDeviceId, newDeviceId):
@@ -138,36 +142,48 @@ def on_reassign(oldDeviceId, newDeviceId):
 	stored_deviceId_file.write(newDeviceId)
 	stored_deviceId_file.close()
 
+def getDeviceById(deviceId):
+	for device in devices:
+		if device['id'] == deviceId:
+			return device
+
 def getBusTypeById(busId):
 	for bus in bus_options:
 		if bus['id'] == busId:
 			return bus['type']
 
-def processTallyData():
-	global mode_preview
-	global mode_program
-	for device_state in device_states:
-		if getBusTypeById(device_state['busId']) == 'preview':
-			if len(device_state['sources']) > 0:
-				mode_preview = True
-			else:
-				mode_preview = False
-		elif getBusTypeById(device_state['busId']) == 'program':
-			if len(device_state['sources']) > 0:
-				mode_program = True
-			else:
-				mode_program = False
-	evaluateMode()
+def getBusById(busId):
+	for bus in bus_options:
+		if bus['id'] == busId:
+			return bus
 
-def evaluateMode():
-	if (mode_preview == True) and (mode_program == False):		# preview mode, color it green
-		doBlink(0, 255, 0)
-	elif (mode_preview == False) and (mode_program == True):	# program mode, color it red
-		doBlink(255, 0, 0)
-	elif (mode_preview == True) and (mode_program == True):		# preview+program mode, color it yellow
-		doBlink(255, 255, 0)
-	else:														# no source, turn it off
-		doBlink(0, 0, 0)
+def processTallyData():
+	busses = []
+
+	for device_state in device_states:
+		if len(device_state['sources']) > 0:
+			bus = getBusById(device_state['busId'])
+			busses.append(bus)
+	
+	priority = 0
+	tallyBus = []
+
+	for bus in busses:
+		if bus['priority'] > priority:
+			priority = bus['priority']
+			tallyBus = bus
+	
+	#this should leave us with a tallyBus object where the highest priority bus is in this object
+	evaluateMode(tallyBus)
+
+def evaluateMode(bus):
+	global deviceId
+	device = getDeviceById(deviceId)
+	if len(bus) > 0:
+		deviceName = device['name']
+		print('{} is in: {}'.format(deviceName,bus['type']))
+		color = hexToRGB(bus['color'])
+		doBlink(color[0], color[1], color[2])
 
 def doBlink(r, g, b):
 	global debounce
@@ -177,11 +193,15 @@ def doBlink(r, g, b):
 		blinkt.show()
 		debounce = False
 
+def hexToRGB(hex):
+	hex = hex.lstrip('#')
+	return tuple(int(hex[i:i+2], 16) for i in (0, 2, 4))
+
 while(1):
 	try:
 		sio.connect('http://' + server + ':' + port)
 		sio.wait()
-		print('Tally Arbiter Listener Running. Press CTRL-C to exit.')
+		print('Tally Arbiter Pimoroni Blinkt Listener Running. Press CTRL-C to exit.')
 		print('Attempting to connect to Tally Arbiter server: ' + server + '(' + port + ')')
 	except KeyboardInterrupt:
 		print('Exiting Tally Arbiter Listener.')
