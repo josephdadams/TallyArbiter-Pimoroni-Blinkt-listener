@@ -16,6 +16,8 @@ import blinkt
 import socketio
 import json
 
+version = '1.2.0'
+
 devices = []
 device_states = []
 bus_options = []
@@ -56,7 +58,7 @@ sio = socketio.Client()
 @sio.event
 def connect():
 	print('Connected to Tally Arbiter server:', server, port)
-	sio.emit('bus_options')												# get current bus options
+	sio.emit('bus_options')											# get current bus options
 	sio.emit('device_listen_blink', {'deviceId': deviceId})			# start listening for the device
 	repeatNumber = 2
 	while(repeatNumber):
@@ -201,7 +203,7 @@ while(1):
 	try:
 		sio.connect('http://' + server + ':' + port)
 		sio.wait()
-		print('Tally Arbiter Pimoroni Blinkt Listener Running. Press CTRL-C to exit.')
+		print('Tally Arbiter Pimoroni Blinkt Listener Running. Version {}. Press CTRL-C to exit.'.format(version))
 		print('Attempting to connect to Tally Arbiter server: ' + server + '(' + port + ')')
 	except KeyboardInterrupt:
 		print('Exiting Tally Arbiter Listener.')
