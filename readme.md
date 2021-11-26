@@ -1,4 +1,7 @@
 # Tally Arbiter Pimoroni Blinkt! Listener
+## This version is only compatible with Tally Arbiter < 3.0. All future versions will be distributed as binaries from the master Tally Arbiter repository. This version has been archived and no future modifications will be made. Please make all feature requests, bug reports, and pull requests against the primary repository: http://github.com/josephdadams/tallyarbiter
+
+
 Tally Arbiter Pimoroni Blinkt! Listener was written  by Joseph Adams and is distributed under the MIT License.
 
 Tally Arbiter Pimoroni Blinkt! Listener is an accessory program that allows you to connect to a Tally Arbiter server and control blinkt! devices (by Pimoroni) connected to a Raspberry Pi based on the incoming tally information.
